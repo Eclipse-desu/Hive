@@ -8,14 +8,24 @@
 // 蜂后, 甲虫, 蚱蜢, 蜘蛛, 蚂蚁
 const int gameSize = 5;
 const int Rule[gameSize] = {1, 2, 3, 2, 3};
-const color_t Color[gameSize + 2] = {WHITE, MAGENTA, CYAN, LIME, PURPLE, BLUE, BLACK};
+// const color_t Color[gameSize + 2] = {WHITE, MAGENTA, CYAN, LIME, PURPLE, BLUE, BLACK};
+const color_t ColorA[gameSize + 2] = {
+    EGEARGB(0x80, 0xFF, 0xFF, 0xFF),
+    EGEARGB(0x80, 0xFF, 0x00, 0xFF),
+    EGEARGB(0x80, 0x00, 0xFF, 0xFF),
+    EGEARGB(0x80, 0x00, 0xFF, 0x00),
+    EGEARGB(0x80, 0x80, 0x00, 0x80),
+    EGEARGB(0x80, 0x00, 0x00, 0xFF),
+    EGEARGB(0x80, 0x00, 0x00, 0x00),
+};
 
-const int Base = 25;
+
+const int Base = 50;
 const int dx[6] = {1, 1, 0, -1, -1, 0};
-const int dy[6] = {0, -1, -1, 0, 1, 1};
+const int dy[6] = {0, 1, 1, 0, -1, -1};
 
-inline float calcx(int x, int y);
-inline float calcy(int x, int y);
+// inline float calcx(int x, int y);
+// inline float calcy(int x, int y);
 
 class Game {
     int width;
@@ -32,17 +42,8 @@ class Game {
     };
 
     std::vector<Ishi> goke[2];
-
-    inline int nbrx(int x, int dir);
-    inline int nbry(int y, int dir);
-    inline float calcx(int x, int y);
-    inline float calcx(std::pair<int, int> coord);
-
-    inline float calcy(int x, int y);
-    inline float calcy(std::pair<int, int> coord);
-
 public:
-    Game(int _width = 1200, int _height = 960);
+    Game(int _width = 1200, int _height = 900);
 
     // 检查是否有玩家胜利.
     // 返回: 
