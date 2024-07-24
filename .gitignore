@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# vscode
+.vscode
+
+# Other cpps
+test2.cpp
