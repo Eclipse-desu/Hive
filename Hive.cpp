@@ -37,7 +37,8 @@ inline float calcy(std::pair<int, int> coord) {
 void zoomImage(PIMAGE& pimg, int zoomWidth, int zoomHeight) {
     if (pimg == NULL) return;
     PIMAGE zoomImg = newimage(zoomWidth, zoomHeight);
-    putimage_withalpha(zoomImg, pimg, 0, 0, zoomWidth, zoomHeight, 0, 0, getwidth(pimg), getheight(pimg));
+    // putimage_withalpha(zoomImg, pimg, 0, 0, zoomWidth, zoomHeight, 0, 0, getwidth(pimg), getheight(pimg));
+    putimage_rotatezoom(zoomImg, pimg, 0, 0, 0, 0, 0, (float)zoomWidth / 600, true, -1, true);
     delimage(pimg);
     pimg = zoomImg;
 }
@@ -137,7 +138,7 @@ void Game::display()
     // 渲染还没有被放到棋盘上的棋子
     int 水平到边界距离 = (width - height) / 4;
     int 竖直距离 = height / (gameSize + 1);
-    int 复叠距离 = Base;
+    int 复叠距离 = Base / 2;
 
     for (int name = 0, pos = 0; name < gameSize; name++) {
         int num = Rule[name];
@@ -219,13 +220,11 @@ void Game::Ishi::render(float x, float y)
     delete[] polypoints;
     delete[] polypoints_inner;
     if (type == 蜂后) {
-        float radius = Base * rate * std::sqrt(3) / 2;
+        float radius = Base * rate * std::sqrt(3);
         PIMAGE pimg = newimage();
         getimage(pimg, "./img/sparkle.png");
-        // zoomImage(pimg, (int)(radius * 2), (int)(radius * 2));
-        // imagefilter_blurring(pimg, 0x50, 0x100);
-        // putimage((int)(x - 25), (int)(y - 25), pimg);
-        putimage_rotatezoom(NULL, pimg, (int)x, (int)y, 0.5, 0.5, 0, radius / 300, true, -1, true);
+        // zoomImage(pimg, std::round(radius), std::round(radius));
+        putimage_rotatezoom(NULL, pimg, (int)x, (int)y, 0.5, 0.5, 0, radius / 600, true, -1, true);
         delimage(pimg);
     }
 }

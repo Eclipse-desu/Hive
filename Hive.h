@@ -85,21 +85,4 @@ public:
     void render(float x, float y);
 };
 
-// class Game::Hexgrid {
-//     int posx, posy;
-//     // 本格棋子 中的棋子是从下到上排列的.
-//     std::vector<Game::Ishi*> 本格棋子;
-//     // 6 个邻居分别是 左上, 左, 左下, 右下, 右, 右上
-
-// public:
-//     Hexgrid(int _x, int _y, Game::Ishi* _ishi= nullptr, Hexgrid* from = nullptr, int dir = 0);
-
-//     int getx();
-//     int gety();
-
-//     // 获得最顶端的棋子.
-//     Game::Ishi* getUpmost();
-//     Hexgrid** getLinks();
-// };
-
 #endif
