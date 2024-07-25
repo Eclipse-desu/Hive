@@ -56,7 +56,7 @@ float Cross(ege_point p1, ege_point p2) {
 
 PIMAGE Icon[7] = {0};
 
-void loadIcon(PIMAGE& pimg, char* _filename) {
+void loadIcon(PIMAGE& pimg, const char* _filename) {
     float rate = 0.9;
     float radius = Base * rate * std::sqrt(3);
     int w, h, c;
@@ -96,7 +96,7 @@ void Game::init()
     loadIcon(Icon[蚱蜢], "./img/topaz.png");
     loadIcon(Icon[蜘蛛], "./img/sampo.png");
     loadIcon(Icon[蚂蚁], "./img/firefly.png");
-    
+
     // 测试模块
     move(&goke[0][0], 0, 0);
     move(&goke[1][4], 0, 1);
@@ -198,7 +198,7 @@ void Game::display()
 void Game::mouseEvent()
 {
     if (mouseStat.is_down() && mouseStat.is_left()) {
-        // 如果没有选中棋子, 那么按下左键应该选中棋子. 
+        // 如果没有选中棋子, 那么按下左键应该选中棋子.
         // 点击棋子后, 先计算其可移动点, 如果没有可移动点, 则选中失败.
         if (picking == nullptr) {
             for (int color = 0; color < 2; color++) {
@@ -394,7 +394,7 @@ int Game::getPossibleDest(Ishi *_ishi)
                         break;
                     }
                 }
-                if (!island) 
+                if (!island)
                     possibleDest.push_back(std::make_pair(nx, ny));
             }
         } else if (_ishi->getType() == 甲虫) {
@@ -412,7 +412,7 @@ int Game::getPossibleDest(Ishi *_ishi)
                     }
                 }
                 // 对于甲虫, 如果爬到其他棋子上, 也可能出现周围没有棋子的情况. 但是这种情况是可行的.
-                if (!island || !Ishis[nx][ny].empty()) 
+                if (!island || !Ishis[nx][ny].empty())
                     possibleDest.push_back(std::make_pair(nx, ny));
                 possibleDest.push_back(std::make_pair(nx, ny));
             }
