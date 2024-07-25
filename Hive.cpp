@@ -122,13 +122,12 @@ void Game::mainLoop()
 
 void Game::display()
 {
-    // printf("display\n");
     int barycenterx = 0, barycentery = 0;
     if (picking != nullptr) {
         picking->render(mouseStat.x, mouseStat.y);
-        if (picking->getPosition().first != -1) {
-            barycenterx += picking->getPosition().first;
-            barycentery += picking->getPosition().second;
+        if (picking->x() != -1) {
+            barycenterx += picking->x();
+            barycentery += picking->y();
         }
     }
     std::vector<Ishi*> renderQueue;
@@ -142,18 +141,18 @@ void Game::display()
         }
     }
     if (renderQueue.size() != 0) {
-        barycenterx /= (renderQueue.size() + ((picking != nullptr && picking->getPosition().first != -1) ? 1 : 0));
-        barycentery /= (renderQueue.size() + ((picking != nullptr && picking->getPosition().first != -1) ? 1 : 0));
+        barycenterx /= (renderQueue.size() + ((picking != nullptr && picking->x() != -1) ? 1 : 0));
+        barycentery /= (renderQueue.size() + ((picking != nullptr && picking->x() != -1) ? 1 : 0));
         for (std::vector<Ishi*>::iterator iter = renderQueue.begin(); iter != renderQueue.end(); iter++) {
-            int rx = (*iter)->getPosition().first - barycenterx;
-            int ry = (*iter)->getPosition().second - barycentery;
+            int rx = (*iter)->x() - barycenterx;
+            int ry = (*iter)->y() - barycentery;
             rx = rx + ((rx > gridSize / 2) ? (-gridSize) : ((rx < -gridSize / 2) ? gridSize : 0));
             ry = ry + ((ry > gridSize / 2) ? (-gridSize) : ((ry < -gridSize / 2) ? gridSize : 0));
             float cx = calcx(rx, ry), cy = calcy(rx, ry);
+            printf("disp %d %d %d %d %.2f %.2f\n", (*iter)->x(), (*iter)->y(), rx, ry, cx, cy);
             (*iter)->render(cx + width / 2, cy + height / 2);
         }
     }
-    // printf("test2\n");
     // 渲染还没有被放到棋盘上的棋子
     int 水平到边界距离 = (width - height) / 4;
     int 竖直距离 = height / (gameSize + 1);
@@ -183,20 +182,25 @@ void Game::display()
             }
         }
     }
+    // printf("test3\n");
     for (int i = 0; i < possibleDest.size(); i++) {
         int rx = possibleDest[i].first - barycenterx;
         int ry = possibleDest[i].second - barycentery;
         rx = rx + ((rx > 15) ? (-30) : ((rx < -15) ? 30 : 0));
         ry = ry + ((ry > 15) ? (-30) : ((ry < -15) ? 30 : 0));
         float cx = calcx(rx, ry), cy = calcy(rx, ry);
-        printf("rendering %d %d\n", rx, ry);
+        // printf("rendering %d %d\n", rx, ry);
         setfillcolor(EGEARGB(0xFF, 0x82, 0xff, 0xfc));
         ege_fillellipse(cx + width / 2, cy + height / 2, 10, 10);
+        possibleDestCenter.push_back(std::make_pair(cx + width / 2, cy + height / 2));
     }
+    // printf("test4\n");
+    return ;
 }
 
 void Game::mouseEvent()
 {
+    // printf("mouseEvent\n");
     if (mouseStat.is_down() && mouseStat.is_left()) {
         // 如果没有选中棋子, 那么按下左键应该选中棋子.
         // 点击棋子后, 先计算其可移动点, 如果没有可移动点, 则选中失败.
@@ -215,10 +219,10 @@ void Game::mouseEvent()
             }
         output:
             if (picking != nullptr) {
-                printf("picked\n");
+                // printf("picked\n");
                 int res = getPossibleDest(picking);
                 if (res == 0) {
-                    printf("unpicked\n");
+                    // printf("unpicked\n");
                     picking = nullptr;
                     return ;
                 }
@@ -227,7 +231,23 @@ void Game::mouseEvent()
                 }
             }
         } else {
+            // printf("not null\n");
             // 如果选中了棋子, 那么这次点击必须是在可行位置, 即 PossibleDest 中.
+            for (int i = 0; i < possibleDest.size(); i++) {
+                float difx = possibleDestCenter[i].first - mouseStat.x;
+                float dify = possibleDestCenter[i].second - mouseStat.y;
+                if (4 * (difx * difx + dify * dify) < Base * Base) {
+                    // move(picking, possibleDest[i].first, possibleDest[i].second);
+                    int nx = possibleDest[i].first;
+                    int ny = possibleDest[i].second;
+                    picking->setPosition(nx, ny);
+                    Ishis[nx][ny].push(picking);
+                    picking = nullptr;
+                    possibleDest.clear();
+                    possibleDestCenter.clear();
+                    break;
+                }
+            }
         }
     } else if (mouseStat.is_down() && mouseStat.is_right()) {
         if (picking != nullptr) {
@@ -235,13 +255,15 @@ void Game::mouseEvent()
                 Ishis[picking->x()][picking->y()].push(picking);
             picking = nullptr;
             possibleDest.clear();
+            possibleDestCenter.clear();
         }
     }
+    // printf("out mouseEvent\n");
 }
 
 void Game::move(Ishi *_ishi, int _nx, int _ny)
 {
-    if (_ishi->x() != -1) {
+    if (_ishi->x() != -1 && Ishis[_ishi->x()][_ishi->y()].top() == _ishi) {
         Ishis[_ishi->x()][_ishi->y()].pop();
     }
     _ishi->setPosition(_nx, _ny);
@@ -275,7 +297,7 @@ int Game::checkConnect(Ishi* _ishi) const {
     int emptyBoard = true;
     for (int color = 0; color < 2 && emptyBoard; color++) {
         for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
-            if (iter->x() != -1) {
+            if (iter->x() != -1 && &*iter != _ishi) {
                 BfsQueue.push(&*iter);
                 emptyBoard = false;
                 break;
@@ -290,12 +312,13 @@ int Game::checkConnect(Ishi* _ishi) const {
     while (!BfsQueue.empty()) {
         const Ishi* top = BfsQueue.front();
         BfsQueue.pop();
+        vis[top->x()][top->y()] = 1;
+        printf("visit: %d %d\n", top->x(), top->y());
         for (int i = 0; i < 6; i ++) {
             int nx = nbrx(top->x(), i, gridSize);
             int ny = nbrx(top->y(), i, gridSize);
             if (!vis[nx][ny] && !Ishis[nx][ny].empty()) {
                 BfsQueue.push(Ishis[nx][ny].top());
-                vis[nx][ny] = 1;
             }
         }
     }
@@ -303,10 +326,12 @@ int Game::checkConnect(Ishi* _ishi) const {
     for (int color = 0; color < 2; color++) {
         for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
             if (iter->x() != -1 && vis[iter->x()][iter->y()] == 0) {
+                // printf("err: %d %d\n", iter->x(), iter->y());
                 return false;
             }
         }
     }
+    // printf("true\n");
     return true;
 }
 
@@ -364,15 +389,17 @@ int Game::getPossibleDest(Ishi *_ishi)
             return 0;
         }
         Ishis[x][y].push(_ishi);    // 当然, 还要记得放回来.
+        // printf("getPossibleDest: size = %d\n", Ishis[x][y].size());
         // 如果去掉后不会断开, 那么就可以计算移动方式.
         if (_ishi->getType() == 蜂后) {
             int isOccupied[6];
             memset(isOccupied, 0, sizeof(isOccupied));
             for (int i = 0; i < 6; i ++) {
                 int nx = nbrx(x, i, gridSize);
-                int ny = nbrx(y, i, gridSize);
-                isOccupied[i] = Ishis[nx][ny].empty();
+                int ny = nbry(y, i, gridSize);
+                isOccupied[i] = !Ishis[nx][ny].empty();
             }
+            printf("\n");
             // 上面统计了周围 6 格的棋子分布.
             // 如果一个空位的周围两个格子都被棋子控制了, 那么就不能走到这个空位.
             for (int i = 0; i < 6; i++) {
@@ -383,9 +410,10 @@ int Game::getPossibleDest(Ishi *_ishi)
                     continue;
                 }
                 int nx = nbrx(x, i, gridSize);
-                int ny = nbrx(y, i, gridSize);
+                int ny = nbry(y, i, gridSize);
                 // 为了避免移动到不连通区域, 还需要看看目标点附近有没有棋子.
                 int island = true;
+                Ishis[x][y].pop();
                 for (int j = 0; j < 6; j++) {
                     int nnx = nbrx(nx, j, gridSize);
                     int nny = nbry(ny, j, gridSize);
@@ -394,6 +422,7 @@ int Game::getPossibleDest(Ishi *_ishi)
                         break;
                     }
                 }
+                Ishis[x][y].push(_ishi);
                 if (!island)
                     possibleDest.push_back(std::make_pair(nx, ny));
             }
@@ -401,7 +430,7 @@ int Game::getPossibleDest(Ishi *_ishi)
             // 只要移动不断开, 甲虫就可以移动, 因此不需要计算 isOccupied 这一步. 因此直接所有格子都可以走
             for (int i = 0; i < 6; i++) {
                 int nx = nbrx(x, i, gridSize);
-                int ny = nbrx(y, i, gridSize);
+                int ny = nbry(y, i, gridSize);
                 int island = true;
                 for (int j = 0; j < 6; j++) {
                     int nnx = nbrx(nx, j, gridSize);

@@ -43,6 +43,7 @@ class Game {
 
     std::vector<Ishi> goke[2];
     std::vector<std::pair<int, int> > possibleDest;
+    std::vector<std::pair<float, float> > possibleDestCenter;
 
     Ishi* picking;
 public:
