@@ -12,45 +12,45 @@
 #include "stb/stb_image_resize2.h"
 
 // 计算向 dir 方向移动一格之后的 x. nbrx = neighbor x
-inline int nbrx(int x, int dir, int gridSize) {
+inline int nbrx(const int &x, const int &dir, const int &gridSize) {
     return (x + dx[dir] + gridSize) % gridSize;
 }
 
 // 计算向 dir 方向移动一格之后的 y. nbry = neighbor y
-inline int nbry(int y, int dir, int gridSize) {
+inline int nbry(const int &y, const int &dir, const int &gridSize) {
     return (y + dy[dir] + gridSize) % gridSize;
 }
 
 // x => (\sqrt{3}, -1), y => (0, 2), z => (-\sqrt{3}, -1)
 template <typename type>
-inline float calcx(type x, type y) {
+inline float calcx(const type &x, const type &y) {
     return Base * (x * std::sqrt(3) + y * (0));
 }
 
 template <typename type>
-inline float calcy(type x, type y) {
+inline float calcy(const type &x, const type &y) {
     return Base * (x * (-1) + y * (2));
 }
 
-inline float calcx(std::pair<int, int> coord) {
+inline float calcx(const std::pair<int, int> &coord) {
     int x = coord.first, y = coord.second;
     return Base * (x * std::sqrt(3) + y * (2));
 }
 
-inline float calcy(std::pair<int, int> coord) {
+inline float calcy(const std::pair<int, int> &coord) {
     int x = coord.first, y = coord.second;
     return Base * (x * (-1) + y * (0));
 }
 
-ege_point operator+ (ege_point& p1, ege_point& p2) {
+inline ege_point operator+ (const ege_point &p1, const ege_point &p2) {
     return (ege_point){p1.x + p2.x, p1.y + p2.y};
 }
 
-ege_point operator- (ege_point& p1, ege_point& p2) {
+inline ege_point operator-(const ege_point &p1, const ege_point &p2){
     return (ege_point){p1.x - p2.x, p1.y - p2.y};
 }
 
-float Cross(ege_point p1, ege_point p2) {
+inline float Cross(const ege_point &p1, const ege_point &p2) {
     return p1.x * p2.y - p1.y * p2.x;
 }
 
