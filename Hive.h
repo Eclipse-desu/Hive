@@ -56,6 +56,8 @@ public:
     // 3 - 平局
     int checkWin();
     
+    void init();
+
     // 游戏主循环
     void mainLoop();
 

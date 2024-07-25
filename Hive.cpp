@@ -53,14 +53,16 @@ float Cross(ege_point p1, ege_point p2) {
     return p1.x * p2.y - p1.y * p2.x;
 }
 
-void loadIcon(char* _filename, float x, float y) {
+PIMAGE Icon[7] = {0};
+
+void loadIcon(PIMAGE& pimg, char* _filename) {
     float rate = 0.9;
     float radius = Base * rate * std::sqrt(3);
     int w, h, c;
     unsigned char *tmp = stbi_load(_filename, &w, &h, &c, 0);
     unsigned char *out = new unsigned char[(int)radius * (int)radius * c];
     stbir_resize_uint8_linear(tmp, w, h, 0, out, (int)radius, (int)radius, 0, STBIR_RGBA);
-    PIMAGE pimg = newimage((int)radius, (int)radius);
+    pimg = newimage((int)radius, (int)radius);
     unsigned int *buf = getbuffer(pimg);
     for (int i = 0; i < getwidth(pimg) * getheight(pimg); i++)
     {
@@ -68,9 +70,6 @@ void loadIcon(char* _filename, float x, float y) {
     }
     delete[] tmp;
     delete[] out;
-
-    putimage_withalpha(NULL, pimg, (int)x - (int)radius / 2, (int)y - (int)radius / 2);
-    delimage(pimg);
 }
 
 Game::Game(int _width, int _height)
@@ -78,19 +77,6 @@ Game::Game(int _width, int _height)
     // std::printf("Game\n");
     width = _width;
     height = _height;
-    for (int color = 0; color <= 1; color++) {
-        for (int name = 0; name < gameSize; name++) {
-            int num = Rule[name];
-            while(num--) {
-                goke[color].push_back(Ishi(color, Type(name), -1, -1));
-            }
-        }
-    }
-    picking = nullptr;
-
-    // 测试模块
-    move(&goke[0][0], 0, 0);
-    move(&goke[1][4], 0, 1);
 }
 
 int Game::checkWin()
@@ -115,6 +101,26 @@ int Game::checkWin()
     return res;
 }
 
+void Game::init()
+{
+    for (int color = 0; color <= 1; color++) {
+        for (int name = 0; name < gameSize; name++) {
+            int num = Rule[name];
+            while(num--) {
+                goke[color].push_back(Ishi(color, Type(name), -1, -1));
+            }
+        }
+    }
+    picking = nullptr;
+    loadIcon(Icon[蜂后], "./img/sparkle.png");
+    loadIcon(Icon[甲虫], "./img/SAM.png");
+    loadIcon(Icon[蜘蛛], "./img/sampo.png");
+    
+    // 测试模块
+    move(&goke[0][0], 0, 0);
+    move(&goke[1][4], 0, 1);
+}
+
 void Game::mainLoop()
 {
     initgraph(width, height);
@@ -136,10 +142,14 @@ void Game::mainLoop()
 void Game::display()
 {
     // printf("display\n");
+    int barycenterx = 0, barycentery = 0;
     if (picking != nullptr) {
         picking->render(mouseStat.x, mouseStat.y);
+        if (picking->getPosition().first != -1) {
+            barycenterx += picking->getPosition().first;
+            barycentery += picking->getPosition().second;
+        }
     }
-    int barycenterx = 0, barycentery = 0;
     std::vector<Ishi*> renderQueue;
     for (int i = 0; i < 30; i++) {
         for (int j = 0; j < 30; j++) {
@@ -151,8 +161,8 @@ void Game::display()
         }
     }
     if (renderQueue.size() != 0) {
-        barycenterx /= renderQueue.size();
-        barycentery /= renderQueue.size();
+        barycenterx /= (renderQueue.size() + ((picking != nullptr && picking->getPosition().first != -1) ? 1 : 0));
+        barycentery /= (renderQueue.size() + ((picking != nullptr && picking->getPosition().first != -1) ? 1 : 0));
         for (std::vector<Ishi*>::iterator iter = renderQueue.begin(); iter != renderQueue.end(); iter++) {
             int rx = (*iter)->getPosition().first - barycenterx;
             int ry = (*iter)->getPosition().second - barycentery;
@@ -171,7 +181,9 @@ void Game::display()
         int cnt = 0;
         for (int i = 0; i < num; i++, pos++) {
             if (goke[0][pos].getPosition().first == -1) {
-                goke[0][pos].render(水平到边界距离 + 复叠距离 * cnt, 竖直距离 * (name + 1));
+                if (&goke[0][pos] != picking) {
+                    goke[0][pos].render(水平到边界距离 + 复叠距离 * cnt, 竖直距离 * (name + 1));
+                }
                 cnt++;
             }
         }
@@ -181,7 +193,9 @@ void Game::display()
         int cnt = 0;
         for (int i = 0; i < num; i++, pos++) {
             if (goke[1][pos].getPosition().first == -1) {
-                goke[1][pos].render(width - 水平到边界距离 - 复叠距离 * cnt, 竖直距离 * (name + 1));
+                if (&goke[1][pos] != picking) {
+                    goke[1][pos].render(width - 水平到边界距离 - 复叠距离 * cnt, 竖直距离 * (name + 1));
+                }
                 cnt++;
             }
         }
@@ -214,7 +228,13 @@ void Game::mouseEvent()
                 if (res == 0) {
                     picking = nullptr;
                 }
+                Ishis[picking->getPosition().first][picking->getPosition().second].pop();
             }
+        }
+    } else if (mouseStat.is_down() && mouseStat.is_right()) {
+        if (picking != nullptr) {
+            Ishis[picking->getPosition().first][picking->getPosition().second].push(picking);
+            picking = nullptr;
         }
     }
 }
@@ -288,14 +308,9 @@ void Game::Ishi::render(float x, float y)
     ege_fillpoly(6, polypoints_inner);
     delete[] polypoints;
     delete[] polypoints_inner;
-    if (type == 蜂后) {
-        loadIcon("./img/sparkle.png", x, y);
-    }
-    if (type == 甲虫) {
-        loadIcon("./img/SAM.png", x, y);
-    }
-    if (type == 蜘蛛) {
-        loadIcon("./img/sampo.png", x, y);
+    float radius = Base * rate * std::sqrt(3);
+    if (type == 蜂后 || type == 甲虫 || type == 蜘蛛) {
+        putimage_withalpha(NULL, Icon[type], (int)x - (int)radius / 2, (int)y - (int)radius / 2);
     }
 }
 
