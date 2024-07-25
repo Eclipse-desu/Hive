@@ -48,13 +48,6 @@ class Game {
 public:
     Game(int _width = 1200, int _height = 900);
 
-    // 检查是否有玩家胜利.
-    // 返回: 
-    // 0 - 无玩家胜利
-    // 1 - 玩家 1 胜利
-    // 2 - 玩家 2 胜利
-    // 3 - 平局
-    int checkWin();
     
     void init();
 
@@ -67,8 +60,18 @@ public:
     // 鼠标事件
     void mouseEvent();
 
-    // 移动到给定位置.
+    // 移动到给定位置. 注意这个棋子必须在栈顶.
     void move(Ishi* _ishi, int _nx, int _ny);
+
+    // 检查是否有玩家胜利.
+    // 返回: 
+    // 0 - 无玩家胜利
+    // 1 - 玩家 1 胜利
+    // 2 - 玩家 2 胜利
+    // 3 - 平局
+    int checkWin() const;
+
+    int checkConnect() const;
 
     int getPossibleDest(Ishi* _ishi);
 };
@@ -85,7 +88,10 @@ public:
     // 查询可行的移动终点.
     // 返回: 存储了可行终点的 vector.
 
+    int getColor() const;
     Type getType() const;
+    int x() const;
+    int y() const;
     std::pair<int, int> getPosition() const;
     void setPosition(int _nx, int _ny);
     std::pair<float, float> getDispCenter() const;
@@ -94,7 +100,7 @@ public:
     // 渲染棋子.
     void render(float x, float y);
 
-    bool inside(int x, int y);
+    bool inside(int x, int y) const;
 };
 
 #endif
