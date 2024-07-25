@@ -71,7 +71,7 @@ public:
     // 3 - 平局
     int checkWin() const;
 
-    int checkConnect() const;
+    int checkConnect(Ishi* _ishi) const;
 
     int getPossibleDest(Ishi* _ishi);
 };

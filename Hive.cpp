@@ -215,8 +215,10 @@ void Game::mouseEvent()
             }
         output:
             if (picking != nullptr) {
+                printf("picked\n");
                 int res = getPossibleDest(picking);
                 if (res == 0) {
+                    printf("unpicked\n");
                     picking = nullptr;
                     return ;
                 }
@@ -229,7 +231,8 @@ void Game::mouseEvent()
         }
     } else if (mouseStat.is_down() && mouseStat.is_right()) {
         if (picking != nullptr) {
-            Ishis[picking->getPosition().first][picking->getPosition().second].push(picking);
+            if (picking->x() != -1)
+                Ishis[picking->x()][picking->y()].push(picking);
             picking = nullptr;
             possibleDest.clear();
         }
@@ -267,7 +270,7 @@ int Game::checkWin() const
     return res;
 }
 
-int Game::checkConnect() const {
+int Game::checkConnect(Ishi* _ishi) const {
     std::queue<const Ishi*> BfsQueue;
     int emptyBoard = true;
     for (int color = 0; color < 2 && emptyBoard; color++) {
@@ -296,6 +299,7 @@ int Game::checkConnect() const {
             }
         }
     }
+    vis[_ishi->x()][_ishi->y()] = 1;
     for (int color = 0; color < 2; color++) {
         for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
             if (iter->x() != -1 && vis[iter->x()][iter->y()] == 0) {
@@ -355,7 +359,7 @@ int Game::getPossibleDest(Ishi *_ishi)
         // 根据规则, 移动期间蜂巢也不能分离, 所以首先直接去掉这个棋子, 来看是否可以移动.
         int x = _ishi->x(), y = _ishi->y();
         Ishis[x][y].pop();          // 先把棋子拿出去.
-        if (!checkConnect()) {      // 如果不连通, 直接返回空 vector.
+        if (!checkConnect(_ishi)) {      // 如果不连通, 直接返回空 vector.
             Ishis[x][y].push(_ishi);
             return 0;
         }
