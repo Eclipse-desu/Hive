@@ -2,6 +2,13 @@
 #include <queue>
 #include <cmath>
 #include <cstdio>
+#include <chrono>
+#include <random>
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#include "stb/stb_image.h"
+#include "stb/stb_image_resize2.h"
 
 // 计算向 dir 方向移动一格之后的 x. nbrx = neighbor x
 inline int nbrx(int x, int dir, int gridSize) {
@@ -34,13 +41,36 @@ inline float calcy(std::pair<int, int> coord) {
     return Base * (x * (-1) + y * (0));
 }
 
-void zoomImage(PIMAGE& pimg, int zoomWidth, int zoomHeight) {
-    if (pimg == NULL) return;
-    PIMAGE zoomImg = newimage(zoomWidth, zoomHeight);
-    // putimage_withalpha(zoomImg, pimg, 0, 0, zoomWidth, zoomHeight, 0, 0, getwidth(pimg), getheight(pimg));
-    putimage_rotatezoom(zoomImg, pimg, 0, 0, 0, 0, 0, (float)zoomWidth / 600, true, -1, true);
+ege_point operator+ (ege_point& p1, ege_point& p2) {
+    return (ege_point){p1.x + p2.x, p1.y + p2.y};
+}
+
+ege_point operator- (ege_point& p1, ege_point& p2) {
+    return (ege_point){p1.x - p2.x, p1.y - p2.y};
+}
+
+float Cross(ege_point p1, ege_point p2) {
+    return p1.x * p2.y - p1.y * p2.x;
+}
+
+void loadIcon(char* _filename, float x, float y) {
+    float rate = 0.9;
+    float radius = Base * rate * std::sqrt(3);
+    int w, h, c;
+    unsigned char *tmp = stbi_load(_filename, &w, &h, &c, 0);
+    unsigned char *out = new unsigned char[(int)radius * (int)radius * c];
+    stbir_resize_uint8_linear(tmp, w, h, 0, out, (int)radius, (int)radius, 0, STBIR_RGBA);
+    PIMAGE pimg = newimage((int)radius, (int)radius);
+    unsigned int *buf = getbuffer(pimg);
+    for (int i = 0; i < getwidth(pimg) * getheight(pimg); i++)
+    {
+        buf[i] = EGERGBA(out[4 * i], out[4 * i + 1], out[4 * i + 2], out[4 * i + 3]);
+    }
+    delete[] tmp;
+    delete[] out;
+
+    putimage_withalpha(NULL, pimg, (int)x - (int)radius / 2, (int)y - (int)radius / 2);
     delimage(pimg);
-    pimg = zoomImg;
 }
 
 Game::Game(int _width, int _height)
@@ -51,15 +81,16 @@ Game::Game(int _width, int _height)
     for (int color = 0; color <= 1; color++) {
         for (int name = 0; name < gameSize; name++) {
             int num = Rule[name];
-            while (num--) {
+            while(num--) {
                 goke[color].push_back(Ishi(color, Type(name), -1, -1));
             }
         }
     }
+    picking = nullptr;
 
     // 测试模块
     move(&goke[0][0], 0, 0);
-    move(&goke[1][2], 0, 1);
+    move(&goke[1][4], 0, 1);
 }
 
 int Game::checkWin()
@@ -86,24 +117,17 @@ int Game::checkWin()
 
 void Game::mainLoop()
 {
-    // std::printf("mainloop\n");
     initgraph(width, height);
     setrendermode(RENDER_MANUAL);
     ege_enable_aa(true);
     display();
     for ( ; is_run() ; delay_fps(60)) {
-        // while(mousemsg()) {
-            // mouseStat = getmouse();
-            // mouseEvent();
-        // }
-        // printf("in loop\n");
+        while (mousemsg())
+        {
+            mouseStat = getmouse();
+            mouseEvent();
+        }
         cleardevice();
-        char str[100];
-        int x, y;
-        mousepos(&x, &y);
-        sprintf(str, "x = %4d, y = %4d", x, y);
-        setcolor(WHITE);
-        outtextxy(0, 0, str);
         display();
     }
     closegraph();
@@ -112,6 +136,9 @@ void Game::mainLoop()
 void Game::display()
 {
     // printf("display\n");
+    if (picking != nullptr) {
+        picking->render(mouseStat.x, mouseStat.y);
+    }
     int barycenterx = 0, barycentery = 0;
     std::vector<Ishi*> renderQueue;
     for (int i = 0; i < 30; i++) {
@@ -124,7 +151,6 @@ void Game::display()
         }
     }
     if (renderQueue.size() != 0) {
-        // printf("rendering on board %d %d\n", barycenterx, barycentery);
         barycenterx /= renderQueue.size();
         barycentery /= renderQueue.size();
         for (std::vector<Ishi*>::iterator iter = renderQueue.begin(); iter != renderQueue.end(); iter++) {
@@ -164,6 +190,33 @@ void Game::display()
 
 void Game::mouseEvent()
 {
+    if (mouseStat.is_down() && mouseStat.is_left()) {
+        // 如果没有选中棋子, 那么按下左键应该选中棋子. 
+        // 点击棋子后, 先计算其可移动点, 如果没有可移动点, 则选中失败.
+        printf("clicked\n");
+        if (picking == nullptr) {
+            printf("Start searching.\n");
+            for (int color = 0; color < 2; color++) {
+                for (int name = 0, pos = 0; name < gameSize; name++) {
+                    int num = Rule[name];
+                    for (int i = num - 1; i >= 0; i--) {
+                        if (goke[color][pos + i].inside(mouseStat.x, mouseStat.y)) {
+                            picking = &goke[color][pos + i];
+                            goto output;
+                        }
+                    }
+                    pos += num;
+                }
+            }
+        output:
+            if (picking != nullptr) {
+                int res = getPossibleDest(picking);
+                if (res == 0) {
+                    picking = nullptr;
+                }
+            }
+        }
+    }
 }
 
 void Game::move(Ishi *_ishi, int _nx, int _ny)
@@ -172,13 +225,24 @@ void Game::move(Ishi *_ishi, int _nx, int _ny)
     Ishis[_nx][_ny].push(_ishi);
 }
 
-Game::Ishi::Ishi(int _color, Type _type, int _px, int _py)
-    : color(_color), type(_type), posx(_px), posy(_py) {}
-
-std::vector<std::pair<int, int> >& Game::Ishi::getPossibleMoves() const
+int Game::getPossibleDest(Ishi *_ishi)
 {
-    std::vector<std::pair<int, int> > temp;
-    return temp;
+    if (_ishi->getType() == 蜂后) {
+        int x = _ishi->getPosition().first, y = _ishi->getPosition().second;
+        for (int i = 0; i < 6; i ++) {
+            int nx = nbrx(x, i, gridSize);
+        }
+    }
+    return 1;
+}
+
+Game::Ishi::Ishi(int _color, Type _type, int _px, int _py)
+    : color(_color), type(_type), posx(_px), posy(_py) {
+    }
+
+Game::Type Game::Ishi::getType() const
+{
+    return type;
 }
 
 std::pair<int, int> Game::Ishi::getPosition() const
@@ -191,15 +255,20 @@ void Game::Ishi::setPosition(int _nx, int _ny)
     posx = _nx; posy = _ny;
 }
 
+std::pair<float, float> Game::Ishi::getDispCenter() const
+{
+    return std::make_pair(dispCenterx, dispCentery);
+}
+
+void Game::Ishi::setDispCenter(float _nx, float _ny)
+{
+    dispCenterx = _nx;
+    dispCentery = _ny;
+}
+
 void Game::Ishi::render(float x, float y)
 {
-    // if (type == 蜂后) {
-    //     PIMAGE pimg = newimage();
-    //     getimage(pimg, "./img/furina-resized.png");
-    //     putimage(x - 25, y - 25, pimg);
-    //     delimage(pimg);
-    //     return ;
-    // }
+    setDispCenter(x, y);
     float rate = 0.9;
     ege_point* polypoints = new ege_point[6];
     ege_point* polypoints_inner = new ege_point[6];
@@ -220,11 +289,45 @@ void Game::Ishi::render(float x, float y)
     delete[] polypoints;
     delete[] polypoints_inner;
     if (type == 蜂后) {
-        float radius = Base * rate * std::sqrt(3);
-        PIMAGE pimg = newimage();
-        getimage(pimg, "./img/sparkle.png");
-        // zoomImage(pimg, std::round(radius), std::round(radius));
-        putimage_rotatezoom(NULL, pimg, (int)x, (int)y, 0.5, 0.5, 0, radius / 600, true, -1, true);
-        delimage(pimg);
+        loadIcon("./img/sparkle.png", x, y);
     }
+    if (type == 甲虫) {
+        loadIcon("./img/SAM.png", x, y);
+    }
+    if (type == 蜘蛛) {
+        loadIcon("./img/sampo.png", x, y);
+    }
+}
+
+bool Game::Ishi::inside(int x, int y)
+{
+    ege_point* polypoints = new ege_point[6];
+    for (int i = 0; i < 6; i++) {
+        float rx = (dx[i] + dx[(i + 1) % 6]) / 3.0;
+        float ry = (dy[i] + dy[(i + 1) % 6]) / 3.0;
+        float cx = calcx(rx, ry);
+        float cy = calcy(rx, ry);
+        polypoints[i].x = cx + dispCenterx;
+        polypoints[i].y = cy + dispCentery;
+    }
+    // 端点是顺时针排布的
+    int sign = 8;
+    ege_point curPos;
+    curPos.x = (float)x;
+    curPos.y = (float)y;
+    for (int i = 0; i < 6; i++) {
+        ege_point p1 = polypoints[(i + 1) % 6] - polypoints[i];
+        ege_point p2 = curPos - polypoints[(i + 1) % 6];
+        float cross = Cross(p1, p2);
+        if (cross == 0) {
+            return false;
+        }
+        if (sign == 8) {
+            sign = std::signbit(cross);
+        }
+        if (sign != std::signbit(cross)) {
+            return false;
+        }
+    }
+    return true;
 }

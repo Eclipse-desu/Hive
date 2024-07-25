@@ -42,6 +42,9 @@ class Game {
     };
 
     std::vector<Ishi> goke[2];
+    std::vector<std::pair<int, int> > possibleDest;
+
+    Ishi* picking;
 public:
     Game(int _width = 1200, int _height = 900);
 
@@ -64,6 +67,8 @@ public:
 
     // 移动到给定位置.
     void move(Ishi* _ishi, int _nx, int _ny);
+
+    int getPossibleDest(Ishi* _ishi);
 };
 
 class Game::Ishi {
@@ -71,18 +76,23 @@ class Game::Ishi {
     Type type;
     // 如果 posx = posy = -1, 说明棋子没有被投入棋盘.
     int posx, posy;
+    float dispCenterx, dispCentery;
 
 public:
     Ishi(int _color, Type _type, int _px, int _py);
     // 查询可行的移动终点.
     // 返回: 存储了可行终点的 vector.
-    std::vector<std::pair<int, int> >& getPossibleMoves() const ;
 
+    Type getType() const;
     std::pair<int, int> getPosition() const;
     void setPosition(int _nx, int _ny);
+    std::pair<float, float> getDispCenter() const;
+    void setDispCenter(float _nx, float _ny);
 
     // 渲染棋子.
     void render(float x, float y);
+
+    bool inside(int x, int y);
 };
 
 #endif
