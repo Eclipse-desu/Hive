@@ -11,6 +11,8 @@
 #include "stb/stb_image.h"
 #include "stb/stb_image_resize2.h"
 
+constexpr float rate = 0.9;
+
 // 计算向 dir 方向移动一格之后的 x. nbrx = neighbor x
 inline int nbrx(int x, int dir, int gridSize) {
     return (x + dx[dir] + gridSize) % gridSize;
@@ -57,7 +59,6 @@ float Cross(ege_point p1, ege_point p2) {
 PIMAGE Icon[7] = {0};
 
 void loadIcon(PIMAGE& pimg, const char* _filename) {
-    float rate = 0.9;
     float radius = Base * rate * std::sqrt(3);
     int w, h, c;
     unsigned char *tmp = stbi_load(_filename, &w, &h, &c, 0);
@@ -471,7 +472,6 @@ void Game::Ishi::setDispCenter(float _nx, float _ny)
 void Game::Ishi::render(float x, float y)
 {
     setDispCenter(x, y);
-    float rate = 0.9;
     ege_point* polypoints = new ege_point[6];
     ege_point* polypoints_inner = new ege_point[6];
     for (int i = 0; i < 6; i++) {
