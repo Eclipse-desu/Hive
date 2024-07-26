@@ -45,14 +45,24 @@ class Game {
     std::vector<std::pair<float, float> > possibleDestCenter;
 
     Ishi* picking;
+
+    void calPosition();
+    // 移动到给定位置. 注意这个棋子必须在栈顶.
+    void move(Ishi* _ishi, int _nx, int _ny);
+
+    int checkConnect(Ishi* _ishi) const;
+
+    int getPossibleDest(Ishi* _ishi);
+
+    int isIsland(int nx, int ny);
 public:
     Game(int _width = 1200, int _height = 900);
 
-    
     void init();
 
     // 游戏主循环
     void mainLoop();
+
 
     // 渲染棋局
     void display();
@@ -60,8 +70,6 @@ public:
     // 鼠标事件
     void mouseEvent();
 
-    // 移动到给定位置. 注意这个棋子必须在栈顶.
-    void move(Ishi* _ishi, int _nx, int _ny);
 
     // 检查是否有玩家胜利.
     // 返回: 
@@ -70,10 +78,6 @@ public:
     // 2 - 玩家 2 胜利
     // 3 - 平局
     int checkWin() const;
-
-    int checkConnect(Ishi* _ishi) const;
-
-    int getPossibleDest(Ishi* _ishi);
 };
 
 class Game::Ishi {
@@ -98,7 +102,7 @@ public:
     void setDispCenter(float _nx, float _ny);
 
     // 渲染棋子.
-    void render(float x, float y);
+    void render(float x, float y) const;
 
     bool inside(int x, int y) const;
 };

@@ -106,14 +106,15 @@ void Game::mainLoop()
     initgraph(width, height);
     setrendermode(RENDER_MANUAL);
     ege_enable_aa(true);
+    calPosition();
     display();
     for ( ; is_run() ; delay_fps(60)) {
         while (mousemsg())
         {
             mouseStat = getmouse();
             mouseEvent();
-            cleardevice();
-            display();
+            // cleardevice();
+            // display();
             // delay_ms(0);
         }
         cleardevice();
@@ -123,12 +124,13 @@ void Game::mainLoop()
 }
 
 int vis[gridSize][gridSize];
-void Game::display()
+void Game::calPosition()
 {
     int barycenterx = 0, barycentery = 0;
     std::vector<std::pair<int, int> > possibleDestCoord;
     std::vector<std::pair<int, int> > renderCoordQueue;
     std::queue<std::pair<int, int> > bfsQueue;
+    memset(vis, 0, sizeof(vis));
     int rootx = -1, rooty = -1;
     for (int i = 0; i < 30; i++) {
         for (int j = 0; j < 30; j++) {
@@ -136,41 +138,46 @@ void Game::display()
                 rootx = i;
                 rooty = j;
                 bfsQueue.push(std::make_pair(0, 0));
-                break;
+                vis[rootx][rooty] = 1;
+                goto display_out;
             }
         }
     }
-    memset(vis, 0, sizeof(vis));
-    possibleDestCoord.clear();
+display_out:
     possibleDestCoord.resize(possibleDest.size());
     for (int i = 0; i < possibleDest.size(); i++) {
-        vis[possibleDest[i].first][possibleDest[i].second] = 2 + i;
         if (possibleDest[i].first == rootx && possibleDest[i].second == rooty) {
             possibleDestCoord[i].first = 0;
             possibleDestCoord[i].second = 0;
+            continue;
         }
+        vis[possibleDest[i].first][possibleDest[i].second] = 2 + i;
     }
+// printf("bfbfs render size = %d\n", renderCoordQueue.size());
     while (!bfsQueue.empty()) {
-        std::pair<float, float> cur = bfsQueue.front();
+        std::pair<int, int> cur = bfsQueue.front();
         renderCoordQueue.push_back(cur);
         int x = cur.first, y = cur.second;
-        vis[nbrx(x + rootx, 6)][nbry(y + rooty, 6)] = 1;
+        // vis[nbrx(x + rootx, 6)][nbry(y + rooty, 6)] = 1;
+// printf("adding render size = %d %d %d (%d %d)\n", renderCoordQueue.size(), cur.first, cur.second, nbrx(x + rootx, 6), nbry(y + rooty, 6));
         bfsQueue.pop();
         for (int i = 0; i < 6; i++) {
             int nx = nbrx(x + rootx, i), ny = nbry(y + rooty, i);
             int& visStat2 = vis[nx][ny];
             if (visStat2 != 1) {
-                if (!Ishis[nx][ny].empty()) {
-                    bfsQueue.push(std::make_pair(x + dx[i], y + dy[i]));
-                }
+// printf("\ttouching %d %d, vis = %d\n", nx, ny, visStat2);
                 if (visStat2 >= 2) {
                     possibleDestCoord[visStat2 - 2].first = x + dx[i];
                     possibleDestCoord[visStat2 - 2].second = y + dy[i];
                 }
+                if (!Ishis[nx][ny].empty()) {
+                    bfsQueue.push(std::make_pair(x + dx[i], y + dy[i]));
+                    vis[nx][ny] = 1;
+                }
             }
         }
     }
-    // printf("render size = %d\n", renderCoordQueue.size());
+// printf("render size = %d\n", renderCoordQueue.size());
     if (renderCoordQueue.size() != 0) {
         barycenterx /= renderCoordQueue.size();
         barycentery /= renderCoordQueue.size();
@@ -188,11 +195,11 @@ void Game::display()
                 } else {
                     Ishis[posx][posy].pop();
                     top = Ishis[posx][posy].top();
-                    top->render(cx + width / 2, cy + height / 2);
+                    top->setDispCenter(cx + width / 2, cy + height / 2);
                     Ishis[posx][posy].push(picking);
                 }
             } else {
-                top->render(cx + width / 2, cy + height / 2);
+                top->setDispCenter(cx + width / 2, cy + height / 2);
             }
         }
     }
@@ -207,7 +214,7 @@ void Game::display()
         for (int i = 0; i < num; i++, pos++) {
             if (goke[0][pos].getPosition().first == -1) {
                 if (&goke[0][pos] != picking) {
-                    goke[0][pos].render(水平到边界距离 + 复叠距离 * cnt, 竖直距离 * (name + 1));
+                    goke[0][pos].setDispCenter(水平到边界距离 + 复叠距离 * cnt, 竖直距离 * (name + 1));
                 }
                 cnt++;
             }
@@ -219,27 +226,55 @@ void Game::display()
         for (int i = 0; i < num; i++, pos++) {
             if (goke[1][pos].getPosition().first == -1) {
                 if (&goke[1][pos] != picking) {
-                    goke[1][pos].render(width - 水平到边界距离 - 复叠距离 * cnt, 竖直距离 * (name + 1));
+                    goke[1][pos].setDispCenter(width - 水平到边界距离 - 复叠距离 * cnt, 竖直距离 * (name + 1));
                 }
                 cnt++;
             }
         }
     }
-    // printf("size: %d\n", possibleDest.size());
+// printf("size: %d\n", possibleDest.size());
     possibleDestCenter.clear();
     possibleDestCenter.resize(possibleDest.size());
     for (int i = 0; i < possibleDest.size(); i++) {
         int rx = possibleDestCoord[i].first - barycenterx;
         int ry = possibleDestCoord[i].second - barycentery;
-        // int posx = nbrx(rootx + possibleDestCoord[i].first, 6);
-        // int posy = nbry(rooty + possibleDestCoord[i].second, 6);
-        // printf("%d %d\n", rx, ry);
-        // rx = rx + ((rx > 15) ? (-30) : ((rx < -15) ? 30 : 0));
-        // ry = ry + ((ry > 15) ? (-30) : ((ry < -15) ? 30 : 0));
         float cx = calcx(rx, ry), cy = calcy(rx, ry);
-        setfillcolor(EGEARGB(0xFF, 0x82, 0xff, 0xfc));
-        ege_fillellipse(cx + width / 2, cy + height / 2, 10, 10);
         possibleDestCenter[i] = std::make_pair(cx + width / 2, cy + height / 2);
+    }
+    return ;
+}
+
+void Game::display()
+{
+    for (int x = 0; x < gridSize; x++) {
+        for (int y = 0; y < gridSize; y++) {
+            if (!Ishis[x][y].empty()) {
+                Ishi* top = Ishis[x][y].top();
+                if (top != picking) {
+                    top->render(top->getDispCenter().first, top->getDispCenter().second);
+                } else {
+                    if (Ishis[x][y].size() > 1) {
+                        Ishis[x][y].pop();
+                        top = Ishis[x][y].top();
+                        top->render(top->getDispCenter().first, top->getDispCenter().second);
+                        Ishis[x][y].push(picking);
+                    }
+                }
+            }
+        }
+    }
+    for (int color = 0; color < 2; color++) {
+        for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
+            if (iter->x() == -1 && (&*iter) != picking) {
+                iter->render(iter->getDispCenter().first, iter->getDispCenter().second);
+            }
+        }
+    }
+    for (int i = 0; i < possibleDest.size(); i++) {
+        float cx = possibleDestCenter[i].first;
+        float cy = possibleDestCenter[i].second;
+        setfillcolor(EGEARGB(0xFF, 0x82, 0xff, 0xfc));
+        ege_fillellipse(cx, cy, 10, 10);
     }
     if (picking != nullptr) {
         picking->render(mouseStat.x, mouseStat.y);
@@ -249,6 +284,7 @@ void Game::display()
 
 void Game::mouseEvent()
 {
+// printf("mouseEvent\n");
     if (mouseStat.is_down() && mouseStat.is_left()) {
         // 如果没有选中棋子, 那么按下左键应该选中棋子.
         // 点击棋子后, 先计算其可移动点, 如果没有可移动点, 则选中失败.
@@ -271,7 +307,6 @@ void Game::mouseEvent()
                 if (res == 0) {
                     printf("no possible move.\n");
                     picking = nullptr;
-                    return ;
                 }
             }
         } else {
@@ -283,6 +318,7 @@ void Game::mouseEvent()
                     // move(picking, possibleDest[i].first, possibleDest[i].second);
                     int nx = possibleDest[i].first;
                     int ny = possibleDest[i].second;
+// printf("before move\n");
                     move(picking, nx, ny);
 // printf("moving ok\n");
                     picking = nullptr;
@@ -291,6 +327,7 @@ void Game::mouseEvent()
                     break;
                 }
             }
+            // printf("success\n");
         }
     } else if (mouseStat.is_down() && mouseStat.is_right()) {
         if (picking != nullptr) {
@@ -301,6 +338,7 @@ void Game::mouseEvent()
             possibleDestCenter.clear();
         }
     }
+    calPosition();
 }
 
 void Game::move(Ishi *_ishi, int _nx, int _ny)
@@ -335,13 +373,15 @@ int Game::checkWin() const
 }
 
 int Game::checkConnect(Ishi* _ishi) const {
-    std::queue<const Ishi*> BfsQueue;
+    std::queue<const Ishi*> bfsQueue;
     int emptyBoard = true;
+    memset(vis, 0, sizeof(vis));
     for (int color = 0; color < 2 && emptyBoard; color++) {
         for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
             if (iter->x() != -1 && &*iter != _ishi) {
 // printf("choosing %d %d\n", iter->x(), iter->y());
-                BfsQueue.push(&*iter);
+                bfsQueue.push(&*iter);
+                vis[iter->x()][iter->y()] = 1;
                 emptyBoard = false;
                 break;
             }
@@ -350,17 +390,16 @@ int Game::checkConnect(Ishi* _ishi) const {
     if (emptyBoard) {
         return false;
     }
-    memset(vis, 0, sizeof(vis));
-    while (!BfsQueue.empty()) {
-        const Ishi* top = BfsQueue.front();
-        BfsQueue.pop();
-        vis[top->x()][top->y()] = 1;
+    while (!bfsQueue.empty()) {
+        const Ishi* top = bfsQueue.front();
+        bfsQueue.pop();
         for (int i = 0; i < 6; i ++) {
             int nx = nbrx(top->x(), i);
             int ny = nbry(top->y(), i);
 // printf("testing %d %d %d %d\n", nx, ny, vis[nx][ny], Ishis[nx][ny].empty());
             if (!vis[nx][ny] && !Ishis[nx][ny].empty()) {
-                BfsQueue.push(Ishis[nx][ny].top());
+                bfsQueue.push(Ishis[nx][ny].top());
+                vis[nx][ny] = 1;
             }
         }
     }
@@ -449,17 +488,8 @@ int Game::getPossibleDest(Ishi *_ishi)
                 int nx = nbrx(x, i);
                 int ny = nbry(y, i);
                 // 为了避免移动到不连通区域, 还需要看看目标点附近有没有棋子.
-                int island = true;
                 Ishis[x][y].pop();
-                for (int j = 0; j < 6; j++) {
-                    int nnx = nbrx(nx, j);
-                    int nny = nbry(ny, j);
-                    if (nnx == nx && nny == ny) continue;
-                    if (!Ishis[nnx][nny].empty()) {
-                        island = false;
-                        break;
-                    }
-                }
+                int island = isIsland(nx, ny);
                 Ishis[x][y].push(_ishi);
                 if (!island)
                     possibleDest.push_back(std::make_pair(nx, ny));
@@ -469,16 +499,8 @@ int Game::getPossibleDest(Ishi *_ishi)
             for (int i = 0; i < 6; i++) {
                 int nx = nbrx(x, i);
                 int ny = nbry(y, i);
-                int island = true;
                 Ishis[x][y].pop();
-                for (int j = 0; j < 6; j++) {
-                    int nnx = nbrx(nx, j);
-                    int nny = nbry(ny, j);
-                    if (!Ishis[nnx][nny].empty()) {
-                        island = false;
-                        break;
-                    }
-                }
+                int island = isIsland(nx, ny);
                 Ishis[x][y].push(_ishi);
                 // 对于甲虫, 如果爬到其他棋子上, 也可能出现周围没有棋子的情况. 但是这种情况是可行的.
                 if (!island || !Ishis[nx][ny].empty())
@@ -487,9 +509,113 @@ int Game::getPossibleDest(Ishi *_ishi)
             }
         } else if (_ishi->getType() == 蚱蜢) {
             // 蚱蜢是跳跃式走法.
+            for (int i = 0; i < 6; i ++) {
+                int nx = nbrx(x, i);
+                int ny = nbry(y, i);
+                if (!Ishis[nx][ny].empty()) {
+                    while (!Ishis[nx][ny].empty()) {
+                        nx = nbrx(nx, i);
+                        ny = nbry(ny, i);
+                    }
+                    possibleDest.push_back(std::make_pair(nx, ny));
+                }
+            }
+        } else if (_ishi->getType() == 蜘蛛) {
+            // 蜘蛛每次必须走三格.
+            // 此处, vis 用来存储 depth.
+            memset(vis, -1, sizeof(vis));
+            
+            for (int color = 0; color < 2; color++) {
+                for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
+                    if (iter->x() != -1) {
+                        vis[iter->x()][iter->y()] = -2;
+                    }
+                }
+            }
+            std::queue<std::pair<int, int> > bfsQueue;
+            bfsQueue.push(std::make_pair(_ishi->x(), _ishi->y()));
+            vis[_ishi->x()][_ishi->y()] = 0;
+            Ishis[_ishi->x()][_ishi->y()].pop();
+            while(!bfsQueue.empty()) {
+                auto top = bfsQueue.front();
+                bfsQueue.pop();
+                int curx = top.first, cury = top.second;
+                printf("visiting %d %d\n", curx, cury);
+                if (vis[curx][cury] == 3) {
+                    printf("%d %d\n", curx, cury);
+                    // 因为加入队列的一定是可行移动, 所以可以直接加入 possibleDest.
+                    possibleDest.push_back(top);
+                    continue;
+                }
+                for (int i = 0; i < 6; i++) {
+                    int nx = nbrx(curx, i);
+                    int ny = nbry(cury, i);
+                    if (vis[nx][ny] == -1 && vis[nx][ny] != -2 && !isIsland(nx, ny)) {
+                        int prev = (i - 1 + 6) % 6, post = (i + 1) % 6;
+                        int prevx = nbrx(curx, prev), prevy = nbry(cury, prev);
+                        int postx = nbrx(curx, post), posty = nbry(cury, post);
+                        if (vis[prevx][prevy] != -2 || vis[postx][posty] != -2) {
+                            vis[nx][ny] = vis[curx][cury] + 1;
+                            bfsQueue.push(std::make_pair(nx, ny));
+                        }
+                    }
+                }
+            }
+            Ishis[_ishi->x()][_ishi->y()].push(_ishi);
+        } else if (_ishi->getType() == 蚂蚁) {
+            memset(vis, -1, sizeof(vis));
+
+            for (int color = 0; color < 2; color++) {
+                for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
+                    if (iter->x() != -1) {
+                        vis[iter->x()][iter->y()] = -2;
+                    }
+                }
+            }
+            std::queue<std::pair<int, int> > bfsQueue;
+            bfsQueue.push(std::make_pair(_ishi->x(), _ishi->y()));
+            vis[_ishi->x()][_ishi->y()] = 0;
+            Ishis[_ishi->x()][_ishi->y()].pop();
+            while(!bfsQueue.empty()) {
+                auto top = bfsQueue.front();
+                bfsQueue.pop();
+                int curx = top.first, cury = top.second;
+                if (vis[curx][cury] > 0) {
+                    // 因为加入队列的一定是可行移动, 所以可以直接加入 possibleDest.
+                    possibleDest.push_back(top);
+                }
+                for (int i = 0; i < 6; i++) {
+                    int nx = nbrx(curx, i);
+                    int ny = nbry(cury, i);
+                    if (vis[nx][ny] == -1 && vis[nx][ny] != -2 && !isIsland(nx, ny)) {
+                        int prev = (i - 1 + 6) % 6, post = (i + 1) % 6;
+                        int prevx = nbrx(curx, prev), prevy = nbry(cury, prev);
+                        int postx = nbrx(curx, post), posty = nbry(cury, post);
+                        if (vis[prevx][prevy] != -2 || vis[postx][posty] != -2) {
+                            vis[nx][ny] = vis[curx][cury] + 1;
+                            bfsQueue.push(std::make_pair(nx, ny));
+                        }
+                    }
+                }
+            }
+            Ishis[_ishi->x()][_ishi->y()].push(_ishi);
         }
     }
     return possibleDest.size();
+}
+
+int Game::isIsland(int nx, int ny)
+{
+    int island = true;
+    for (int j = 0; j < 6; j++) {
+        int nnx = nbrx(nx, j);
+        int nny = nbry(ny, j);
+        if (!Ishis[nnx][nny].empty()) {
+            island = false;
+            break;
+        }
+    }
+    return island;
 }
 
 Game::Ishi::Ishi(int _color, Type _type, int _px, int _py)
@@ -537,9 +663,8 @@ void Game::Ishi::setDispCenter(float _nx, float _ny)
     dispCentery = _ny;
 }
 
-void Game::Ishi::render(float x, float y)
+void Game::Ishi::render(float x, float y) const
 {
-    setDispCenter(x, y);
     float rate = 0.9;
     ege_point* polypoints = new ege_point[6];
     ege_point* polypoints_inner = new ege_point[6];
