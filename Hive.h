@@ -19,10 +19,10 @@ const color_t ColorA[gameSize + 2] = {
     EGEARGB(0x80, 0x00, 0x00, 0x00),
 };
 
-
+const int gridSize = 30;
 const int Base = 50;
-const int dx[6] = {1, 1, 0, -1, -1, 0};
-const int dy[6] = {0, 1, 1, 0, -1, -1};
+const int dx[7] = {1, 1, 0, -1, -1, 0, 0};
+const int dy[7] = {0, 1, 1, 0, -1, -1, 0};
 
 // inline float calcx(int x, int y);
 // inline float calcy(int x, int y);
@@ -35,7 +35,6 @@ class Game {
 
     class Ishi;
 
-    static const int gridSize = 30;
     std::stack<Game::Ishi*> Ishis[gridSize][gridSize];
     enum Type {
         蜂后, 甲虫, 蚱蜢, 蜘蛛, 蚂蚁, 幻影, 空相, 
