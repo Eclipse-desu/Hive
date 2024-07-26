@@ -294,7 +294,11 @@ void Game::mouseEvent()
                     int num = Rule[name];
                     for (int i = num - 1; i >= 0; i--) {
                         if (goke[color][pos + i].inside(mouseStat.x, mouseStat.y)) {
-                            picking = &goke[color][pos + i];
+                            if (goke[color][pos + i].x() != -1) {
+                                picking = Ishis[goke[color][pos + i].x()][goke[color][pos + i].y()].top();
+                            } else {
+                                picking = &goke[color][pos + i];
+                            }
                             goto output;
                         }
                     }
@@ -554,7 +558,8 @@ int Game::getPossibleDest(Ishi *_ishi)
                         int prev = (i - 1 + 6) % 6, post = (i + 1) % 6;
                         int prevx = nbrx(curx, prev), prevy = nbry(cury, prev);
                         int postx = nbrx(curx, post), posty = nbry(cury, post);
-                        if (vis[prevx][prevy] != -2 || vis[postx][posty] != -2) {
+                        int admissableCount = (vis[prevx][prevy] != -2) + (vis[postx][posty] != -2);
+                        if (admissableCount == 1) {
                             vis[nx][ny] = vis[curx][cury] + 1;
                             bfsQueue.push(std::make_pair(nx, ny));
                         }
@@ -591,7 +596,8 @@ int Game::getPossibleDest(Ishi *_ishi)
                         int prev = (i - 1 + 6) % 6, post = (i + 1) % 6;
                         int prevx = nbrx(curx, prev), prevy = nbry(cury, prev);
                         int postx = nbrx(curx, post), posty = nbry(cury, post);
-                        if (vis[prevx][prevy] != -2 || vis[postx][posty] != -2) {
+                        int admissableCount = (vis[prevx][prevy] != -2) + (vis[postx][posty] != -2);
+                        if (admissableCount == 1) {
                             vis[nx][ny] = vis[curx][cury] + 1;
                             bfsQueue.push(std::make_pair(nx, ny));
                         }
