@@ -97,20 +97,26 @@ void Game::init()
     loadIcon(Icon[蚂蚁], "./img/firefly.png");
 
     // 测试模块
-    move(&goke[0][0], 0, 0);
-    move(&goke[1][4], 0, 1);
+    // move(&goke[0][0], 0, 0);
+    // move(&goke[1][4], 0, 1);
 }
 
 void Game::mainLoop()
 {
     initgraph(width, height);
     setrendermode(RENDER_MANUAL);
+    setfont(18, 0, "Consolas");
     ege_enable_aa(true);
+    char info[200];
+    
     calPosition();
     display();
+    // 渲染循环
     for ( ; is_run() ; delay_fps(60)) {
-        while (mousemsg())
-        {
+        if (checkWin() != 0) {
+            break;
+        }
+        while (mousemsg()) {
             mouseStat = getmouse();
             mouseEvent();
             // cleardevice();
@@ -119,7 +125,17 @@ void Game::mainLoop()
         }
         cleardevice();
         display();
+        sprintf(info, "Current Turn: %s", (currentTurn & 1) == 0 ? "White" : "Black");
+        outtextxy(0, 0, info);
     }
+    int res = checkWin();
+    for ( ; is_run() ; delay_fps(60)) {
+        cleardevice();
+        display();
+        sprintf(info, "Winner: %s %d", res == 1 ? "White" : (res == 2 ? "Black" : "Draw"), res);
+        outtextxy(0, 0, info);
+    }
+    // 游戏结束, 输出结果.
     closegraph();
 }
 
@@ -307,10 +323,16 @@ void Game::mouseEvent()
             }
         output:
             if (picking != nullptr) {
-                int res = getPossibleDest(picking);
-                if (res == 0) {
-                    printf("no possible move.\n");
+                if (picking->getColor() != (currentTurn & 1)) {
                     picking = nullptr;
+                } else if ((currentTurn == 6 || currentTurn == 7) && goke[currentTurn & 1][0].x() == -1 && picking != &goke[currentTurn & 1][0]) {
+                    picking = nullptr;
+                } else {
+                    int res = getPossibleDest(picking);
+                    if (res == 0) {
+                        printf("no possible move.\n");
+                        picking = nullptr;
+                    }
                 }
             }
         } else {
@@ -328,6 +350,7 @@ void Game::mouseEvent()
                     picking = nullptr;
                     possibleDest.clear();
                     possibleDestCenter.clear();
+                    currentTurn++;
                     break;
                 }
             }
@@ -359,17 +382,25 @@ int Game::checkWin() const
     int res = 3, cx, cy;
     cx = goke[0][0].getPosition().first;
     cy = goke[0][0].getPosition().second;
+    if (cx == -1) {
+        return 0;
+    }
     for (int i = 0; i < 6; i++) {
         if (Ishis[nbrx(cx, i)][nbry(cy, i)].empty()) {
-            res = res - 1;
+            // printf("white not lose\n");
+            res = res - 2;
             break;
         }
     }
     cx = goke[1][0].getPosition().first;
     cy = goke[1][0].getPosition().second;
+    if (cx == -1) {
+        return 0;
+    }
     for (int i = 0; i < 6; i++) {
         if (Ishis[nbrx(cx, i)][nbry(cy, i)].empty()) {
-            res = res - 2;
+            // printf("black lose");
+            res = res - 1;
             break;
         }
     }
@@ -423,6 +454,17 @@ int Game::getPossibleDest(Ishi *_ishi)
 {
     possibleDest.clear();
     if (_ishi->getPosition().first == -1) {
+        // 如果是双方的第一个回合, 那么是特殊规则
+        // 第一个落子的必然在 0 0, 第二个必然在其附近
+        if (currentTurn == 0) {
+            possibleDest.push_back(std::make_pair(0, 0));
+        } else if (currentTurn == 1) {
+            for (int i = 0; i < 6; i++) {
+                int nx = nbrx(0, i);
+                int ny = nbry(0, i);
+                possibleDest.push_back(std::make_pair(nx, ny));
+            }
+        } else {
         // 棋子从棋篓中拿出来, 那么应该放在同色棋子边上.
         int okColor[30][30];
         memset(okColor, -1, sizeof(okColor));
@@ -454,10 +496,11 @@ int Game::getPossibleDest(Ishi *_ishi)
                 }
             }
         }
-        if (possibleDest.empty()) {
-            // 第一颗棋子放下时, 棋盘是空的, 所以所有格子都不可行.
-            // 此时手动将 0, 0 放入.
-            possibleDest.push_back(std::make_pair(0, 0));
+        // if (possibleDest.empty()) {
+        //     // 第一颗棋子放下时, 棋盘是空的, 所以所有格子都不可行.
+        //     // 此时手动将 0, 0 放入.
+        //     possibleDest.push_back(std::make_pair(0, 0));
+        // }
         }
     } else {
         // 已经在棋盘上的棋子, 则考虑如何移动.
@@ -684,9 +727,9 @@ void Game::Ishi::render(float x, float y) const
         polypoints_inner[i].x = rate * cx + x;
         polypoints_inner[i].y = rate * cy + y;
     }
-    setfillcolor(ColorA[type]);
+    setfillcolor(ColorA[color]);
     ege_fillpoly(6, polypoints);
-    setfillcolor(alphablend(ColorA[type], ColorA[0], rate));
+    setfillcolor(alphablend(ColorA[color], ColorA[0], rate));
     ege_fillpoly(6, polypoints_inner);
     delete[] polypoints;
     delete[] polypoints_inner;

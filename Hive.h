@@ -31,6 +31,8 @@ class Game {
     int width;
     int height;
 
+    unsigned int currentTurn;
+
     mouse_msg mouseStat;
 
     class Ishi;
