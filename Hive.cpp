@@ -331,7 +331,15 @@ void Game::mouseEvent()
                 for (int name = 0, pos = 0; name < gameSize; name++) {
                     int num = Rule[name];
                     for (int i = num - 1; i >= 0; i--) {
-                        if (goke[color][pos + i].inside(mouseStat.x - offset_x, mouseStat.y - offset_y)) {
+                        if (goke[color][pos + i].x() == -1 && goke[color][pos + i].inside(mouseStat.x, mouseStat.y)) {
+                            if (goke[color][pos + i].x() != -1) {
+                                picking = Ishis[goke[color][pos + i].x()][goke[color][pos + i].y()].top();
+                            } else {
+                                picking = &goke[color][pos + i];
+                            }
+                            goto output;
+                        }
+                        else if (goke[color][pos + i].inside(mouseStat.x - offset_x, mouseStat.y - offset_y)) {
                             if (goke[color][pos + i].x() != -1) {
                                 picking = Ishis[goke[color][pos + i].x()][goke[color][pos + i].y()].top();
                             } else {
