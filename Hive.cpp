@@ -109,6 +109,7 @@ void Game::mainLoop()
     setrendermode(RENDER_MANUAL);
     setfont(18, 0, "Consolas");
     ege_enable_aa(true);
+    close_console();
     char info[200];
 
     calPosition();
