@@ -349,6 +349,8 @@ void Game::mouseEvent()
                     picking = nullptr;
                 } else if ((currentTurn == 6 || currentTurn == 7) && goke[currentTurn & 1][0].x() == -1 && picking != &goke[currentTurn & 1][0]) {
                     picking = nullptr;
+                } else if (goke[currentTurn & 1][0].x() == -1 && picking->x() != -1) {
+                    picking = nullptr;
                 } else {
                     int res = getPossibleDest(picking);
                     if (res == 0) {
