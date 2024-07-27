@@ -55,6 +55,8 @@ inline float Cross(const ege_point &p1, const ege_point &p2) {
 }
 
 PIMAGE Icon[7] = {0};
+int offset_x = 0;
+int offset_y = 0;
 
 void loadIcon(PIMAGE& pimg, const char* _filename) {
     float rate = 0.9;
@@ -108,7 +110,7 @@ void Game::mainLoop()
     setfont(18, 0, "Consolas");
     ege_enable_aa(true);
     char info[200];
-    
+
     calPosition();
     display();
     // 渲染循环
@@ -282,18 +284,18 @@ void Game::display()
     for (int color = 0; color < 2; color++) {
         for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
             if (iter->x() == -1 && (&*iter) != picking) {
-                iter->render(iter->getDispCenter().first, iter->getDispCenter().second);
+                iter->render(iter->getDispCenter().first, iter->getDispCenter().second, false);
             }
         }
     }
     for (int i = 0; i < possibleDest.size(); i++) {
-        float cx = possibleDestCenter[i].first;
-        float cy = possibleDestCenter[i].second;
+        float cx = offset_x + possibleDestCenter[i].first;
+        float cy = offset_y + possibleDestCenter[i].second;
         setfillcolor(EGEARGB(0xFF, 0x82, 0xff, 0xfc));
         ege_fillellipse(cx, cy, 10, 10);
     }
     if (picking != nullptr) {
-        picking->render(mouseStat.x, mouseStat.y);
+        picking->render(mouseStat.x, mouseStat.y, false);
     }
     return ;
 }
@@ -301,6 +303,26 @@ void Game::display()
 void Game::mouseEvent()
 {
 // printf("mouseEvent\n");
+    static bool mid = false;
+    static int mid_x = 0, mid_y = 0;
+    if(mouseStat.is_mid()) {
+        if (mid) {
+            mid = false;
+        }
+        else {
+            mid = true;
+            mid_x = mouseStat.x;
+            mid_y = mouseStat.y;
+        }
+    }
+    if (mid) {
+            offset_x += (mouseStat.x - mid_x);
+            offset_y += (mouseStat.y - mid_y);
+            offset_x = std::max(-width / 2, std::min(width / 2, offset_x));
+            offset_y = std::max(-height / 2, std::min(height / 2, offset_y));
+            mid_x = mouseStat.x;
+            mid_y = mouseStat.y;
+    }
     if (mouseStat.is_down() && mouseStat.is_left()) {
         // 如果没有选中棋子, 那么按下左键应该选中棋子.
         // 点击棋子后, 先计算其可移动点, 如果没有可移动点, 则选中失败.
@@ -338,8 +360,8 @@ void Game::mouseEvent()
         } else {
             // 如果选中了棋子, 那么这次点击必须是在可行位置, 即 PossibleDest 中.
             for (int i = 0; i < possibleDest.size(); i++) {
-                float difx = possibleDestCenter[i].first - mouseStat.x;
-                float dify = possibleDestCenter[i].second - mouseStat.y;
+                float difx = offset_x + possibleDestCenter[i].first - mouseStat.x;
+                float dify = offset_y + possibleDestCenter[i].second - mouseStat.y;
                 if (4 * (difx * difx + dify * dify) < Base * Base) {
                     // move(picking, possibleDest[i].first, possibleDest[i].second);
                     int nx = possibleDest[i].first;
@@ -571,7 +593,7 @@ int Game::getPossibleDest(Ishi *_ishi)
             // 蜘蛛每次必须走三格.
             // 此处, vis 用来存储 depth.
             memset(vis, -1, sizeof(vis));
-            
+
             for (int color = 0; color < 2; color++) {
                 for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
                     if (iter->x() != -1) {
@@ -712,7 +734,7 @@ void Game::Ishi::setDispCenter(float _nx, float _ny)
     dispCentery = _ny;
 }
 
-void Game::Ishi::render(float x, float y) const
+void Game::Ishi::render(float x, float y, bool offset) const
 {
     float rate = 0.9;
     ege_point* polypoints = new ege_point[6];
@@ -722,10 +744,10 @@ void Game::Ishi::render(float x, float y) const
         float ry = (dy[i] + dy[(i + 1) % 6]) / 3.0;
         float cx = calcx(rx, ry);
         float cy = calcy(rx, ry);
-        polypoints[i].x = cx + x;
-        polypoints[i].y = cy + y;
-        polypoints_inner[i].x = rate * cx + x;
-        polypoints_inner[i].y = rate * cy + y;
+        polypoints[i].x = (offset? offset_x : 0) + cx + x;
+        polypoints[i].y = (offset? offset_y : 0) + cy + y;
+        polypoints_inner[i].x = (offset? offset_x : 0) + rate * cx + x;
+        polypoints_inner[i].y = (offset? offset_y : 0) + rate * cy + y;
     }
     setfillcolor(ColorA[color]);
     ege_fillpoly(6, polypoints);
@@ -734,7 +756,8 @@ void Game::Ishi::render(float x, float y) const
     delete[] polypoints;
     delete[] polypoints_inner;
     float radius = Base * rate * std::sqrt(3);
-    putimage_withalpha(NULL, Icon[type], (int)x - (int)radius / 2, (int)y - (int)radius / 2);
+    putimage_withalpha(NULL, Icon[type],
+    (offset? offset_x : 0) + (int)x - (int)radius / 2, (offset? offset_y : 0) + (int)y - (int)radius / 2);
 }
 
 bool Game::Ishi::inside(int x, int y) const
