@@ -56,6 +56,8 @@ class Game {
 
     int getPossibleDest(Ishi* _ishi);
 
+    void dfsMove(int x, int y, int depth);
+
     int isIsland(int nx, int ny);
 public:
     Game(int _width = 1200, int _height = 900);

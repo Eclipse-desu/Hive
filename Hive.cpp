@@ -495,42 +495,37 @@ int Game::getPossibleDest(Ishi *_ishi)
                 possibleDest.push_back(std::make_pair(nx, ny));
             }
         } else {
-        // 棋子从棋篓中拿出来, 那么应该放在同色棋子边上.
-        int okColor[30][30];
-        memset(okColor, -1, sizeof(okColor));
-        for (int i = 0; i < gridSize; i++) {
-            for (int j = 0; j < gridSize; j++) {
-                if (!Ishis[i][j].empty()) {
-                    Ishi* curIshi = Ishis[i][j].top();
-                    for (int k = 0; k < 6; k++) {
-                        int nx = nbrx(i, k);
-                        int ny = nbry(j, k);
-                        int& oc = okColor[nx][ny];
-                        if (oc == -2)
-                            continue;
-                        if (oc == -1) {
-                            oc = curIshi->getColor();
-                            continue;
-                        }
-                        if (oc != curIshi->getColor()) {
-                            oc = -2;
+            // 棋子从棋篓中拿出来, 那么应该放在同色棋子边上.
+            int okColor[30][30];
+            memset(okColor, -1, sizeof(okColor));
+            for (int i = 0; i < gridSize; i++) {
+                for (int j = 0; j < gridSize; j++) {
+                    if (!Ishis[i][j].empty()) {
+                        Ishi* curIshi = Ishis[i][j].top();
+                        for (int k = 0; k < 6; k++) {
+                            int nx = nbrx(i, k);
+                            int ny = nbry(j, k);
+                            int& oc = okColor[nx][ny];
+                            if (oc == -2)
+                                continue;
+                            if (oc == -1) {
+                                oc = curIshi->getColor();
+                                continue;
+                            }
+                            if (oc != curIshi->getColor()) {
+                                oc = -2;
+                            }
                         }
                     }
                 }
             }
-        }
-        for (int i = 0; i < gridSize; i++) {
-            for (int j = 0; j < gridSize; j++) {
-                if (Ishis[i][j].empty() && okColor[i][j] == _ishi->getColor()) {
-                    possibleDest.push_back(std::make_pair(i, j));
+            for (int i = 0; i < gridSize; i++) {
+                for (int j = 0; j < gridSize; j++) {
+                    if (Ishis[i][j].empty() && okColor[i][j] == _ishi->getColor()) {
+                        possibleDest.push_back(std::make_pair(i, j));
+                    }
                 }
             }
-        }
-        // if (possibleDest.empty()) {
-        //     // 第一颗棋子放下时, 棋盘是空的, 所以所有格子都不可行.
-        //     // 此时手动将 0, 0 放入.
-        //     possibleDest.push_back(std::make_pair(0, 0));
-        // }
         }
     } else {
         // 已经在棋盘上的棋子, 则考虑如何移动.
@@ -599,9 +594,7 @@ int Game::getPossibleDest(Ishi *_ishi)
             }
         } else if (_ishi->getType() == 蜘蛛) {
             // 蜘蛛每次必须走三格.
-            // 此处, vis 用来存储 depth.
             memset(vis, -1, sizeof(vis));
-
             for (int color = 0; color < 2; color++) {
                 for (std::vector<Ishi>::const_iterator iter = goke[color].cbegin(); iter != goke[color].cend(); iter++) {
                     if (iter->x() != -1) {
@@ -609,37 +602,10 @@ int Game::getPossibleDest(Ishi *_ishi)
                     }
                 }
             }
-            std::queue<std::pair<int, int> > bfsQueue;
-            bfsQueue.push(std::make_pair(_ishi->x(), _ishi->y()));
-            vis[_ishi->x()][_ishi->y()] = 0;
-            Ishis[_ishi->x()][_ishi->y()].pop();
-            while(!bfsQueue.empty()) {
-                auto top = bfsQueue.front();
-                bfsQueue.pop();
-                int curx = top.first, cury = top.second;
-                printf("visiting %d %d\n", curx, cury);
-                if (vis[curx][cury] == 3) {
-                    printf("%d %d\n", curx, cury);
-                    // 因为加入队列的一定是可行移动, 所以可以直接加入 possibleDest.
-                    possibleDest.push_back(top);
-                    continue;
-                }
-                for (int i = 0; i < 6; i++) {
-                    int nx = nbrx(curx, i);
-                    int ny = nbry(cury, i);
-                    if (vis[nx][ny] == -1 && vis[nx][ny] != -2 && !isIsland(nx, ny)) {
-                        int prev = (i - 1 + 6) % 6, post = (i + 1) % 6;
-                        int prevx = nbrx(curx, prev), prevy = nbry(cury, prev);
-                        int postx = nbrx(curx, post), posty = nbry(cury, post);
-                        int admissableCount = (vis[prevx][prevy] != -2) + (vis[postx][posty] != -2);
-                        if (admissableCount == 1) {
-                            vis[nx][ny] = vis[curx][cury] + 1;
-                            bfsQueue.push(std::make_pair(nx, ny));
-                        }
-                    }
-                }
-            }
-            Ishis[_ishi->x()][_ishi->y()].push(_ishi);
+            vis[x][y] = 0;
+            Ishis[x][y].pop();
+            dfsMove(x, y, 0);
+            Ishis[x][y].push(_ishi);
         } else if (_ishi->getType() == 蚂蚁) {
             memset(vis, -1, sizeof(vis));
 
@@ -681,6 +647,30 @@ int Game::getPossibleDest(Ishi *_ishi)
         }
     }
     return possibleDest.size();
+}
+
+void Game::dfsMove(int x, int y, int depth)
+{
+    if (depth == 3) {
+        possibleDest.push_back(std::make_pair(x, y));
+        return;
+    }
+    for (int i = 0; i < 6; i++) {
+        int nx = nbrx(x, i);
+        int ny = nbry(y, i);
+        int prev = (i - 1 + 6) % 6, post = (i + 1) % 6;
+        if (vis[nx][ny] == -1 && !isIsland(nx, ny)) {
+            int prevx = nbrx(x, prev), prevy = nbry(y, prev);
+            int postx = nbrx(x, post), posty = nbry(y, post);
+            int admissableCount = (vis[prevx][prevy] != -2) + (vis[postx][posty] != -2);
+            // printf("testing into %d %d %d, %d %d\n", nx, ny, depth + 1, (vis[prevx][prevy] != -2), (vis[postx][posty] != -2));
+            if (admissableCount == 1) {
+                vis[nx][ny] = vis[x][y] + 1;
+                dfsMove(nx, ny, depth + 1);
+                vis[nx][ny] = -1;
+            }
+        }
+    }
 }
 
 int Game::isIsland(int nx, int ny)
