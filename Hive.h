@@ -39,7 +39,7 @@ class Game {
 
     std::stack<Game::Ishi*> Ishis[gridSize][gridSize];
     enum Type {
-        蜂后, 甲虫, 蚱蜢, 蜘蛛, 蚂蚁, 幻影, 空相, 
+        蜂后, 甲虫, 蚱蜢, 蜘蛛, 蚂蚁, 幻影, 空相,
     };
 
     std::vector<Ishi> goke[2];
@@ -74,7 +74,7 @@ public:
 
 
     // 检查是否有玩家胜利.
-    // 返回: 
+    // 返回:
     // 0 - 无玩家胜利
     // 1 - 玩家 1 胜利
     // 2 - 玩家 2 胜利
@@ -104,7 +104,7 @@ public:
     void setDispCenter(float _nx, float _ny);
 
     // 渲染棋子.
-    void render(float x, float y) const;
+    void render(float x, float y, bool offset = true) const;
 
     bool inside(int x, int y) const;
 };
